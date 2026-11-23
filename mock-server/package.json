@@ -1,0 +1,14 @@
+{
+  "name": "raas-op-admin-mock",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Raas-op-admin 本地模拟后端（内存数据，仅供联调演示）",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "multer": "^2.0.2"
+  }
+}

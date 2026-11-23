@@ -26,3 +26,6 @@ coverage
 *.njsproj
 *.sln
 *.sw?
+
+# mock 后端上传目录
+mock-server/uploads/

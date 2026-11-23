@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "vite",
+    "mock": "node mock-server/server.js",
+    "dev:all": "run-p mock dev",
     "build": "run-p type-check build-only",
     "preview": "vite preview",
     "test:unit": "vitest",
