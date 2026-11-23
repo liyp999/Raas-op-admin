@@ -1,32 +1,60 @@
+import axios, { type AxiosRequestConfig } from 'axios'
 
-import axios from "axios";
-
-
-
-/* 创建请求实例 */
+/** 统一请求实例：baseURL 来自环境变量，未配置时默认 /api（走 vite 代理） */
 const service = axios.create({
-    baseURL: "http://localhost:8080",
-    timeout: 5000,
-});
+  baseURL: import.meta.env.VITE_APP_API_BASEURL || '/api',
+  timeout: Number(import.meta.env.VITE_APP_TIMEOUT) || 10000
+})
 
-// 添加请求拦截器
-axios.interceptors.request.use(function (config) {
-    // 在发送请求之前做些什么
-    return config;
-}, function (error) {
-    // 对请求错误做些什么
-    return Promise.reject(error);
-});
+const TOKEN_KEY = 'raas_token'
 
-// 添加响应拦截器
-axios.interceptors.response.use(function (response) {
-    // 2xx 范围内的状态码都会触发该函数。
-    // 对响应数据做点什么
-    return response;
-}, function (error) {
-    // 超出 2xx 范围的状态码都会触发该函数。
-    // 对响应错误做点什么
-    return Promise.reject(error);
-});
+export function getToken() {
+  return localStorage.getItem(TOKEN_KEY) || ''
+}
 
-export default service;
+export function setToken(token: string) {
+  if (token) localStorage.setItem(TOKEN_KEY, token)
+  else localStorage.removeItem(TOKEN_KEY)
+}
+
+/* 请求拦截：自动带 token */
+service.interceptors.request.use((config) => {
+  const token = getToken()
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
+
+/* 响应拦截：拆掉 { code, msg, data } 外壳，统一抛错 */
+service.interceptors.response.use(
+  (response) => {
+    const body = response.data
+    if (body && typeof body === 'object' && 'code' in body) {
+      if (body.code === 0) return body.data
+      return Promise.reject(new Error(body.msg || '请求失败'))
+    }
+    return body
+  },
+  (error) => {
+    const status = error.response?.status
+    const message = error.response?.data?.msg || error.message || '网络异常，请稍后重试'
+    if (status === 401) setToken('')
+    return Promise.reject(new Error(message))
+  }
+)
+
+export const http = {
+  get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
+    return service.get(url, config) as unknown as Promise<T>
+  },
+  post<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+    return service.post(url, data, config) as unknown as Promise<T>
+  },
+  put<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+    return service.put(url, data, config) as unknown as Promise<T>
+  },
+  delete<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
+    return service.delete(url, config) as unknown as Promise<T>
+  }
+}
+
+export default http

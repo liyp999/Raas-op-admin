@@ -1,34 +1,36 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
-// import NProgress from 'nprogress'
-// import 'nprogress/nprogress.css'
-const routes: RouteRecordRaw[] = [{
+import { getToken } from '@/utils/request'
+
+const routes: RouteRecordRaw[] = [
+  {
     path: '/',
     redirect: '/login'
-},
-{
+  },
+  {
     path: '/login',
     name: 'login',
-    meta: { tittle: '登录' },
+    meta: { title: '登录' },
     component: () => import('@/views/Login/LoginData.vue')
-},
-{
+  },
+  {
     path: '/home',
     name: 'home',
-    // route level code-splitting
-    // this generates a separate chunk (About.[hash].js) for this route
-    // which is lazy-loaded when the route is visited.
+    meta: { title: '设备运维' },
     component: () => import('@/views/Home/HomeData.vue')
-},
-{ path: '/:pathMatch(.*)*', name: 'NoFount', component: () => import('@/components/Error/404.vue') }]
-// import.meta.env.BASE_URL
+  },
+  { path: '/:pathMatch(.*)*', name: 'NoFount', component: () => import('@/components/Error/404.vue') }
+]
+
 const router = createRouter({
-    history: createWebHistory(),
-    routes: routes
+  history: createWebHistory(),
+  routes
 })
-// router.beforeEach(async (to, from) => {
-//     NProgress.start()
-// })
-// router.afterEach(to => {
-//     NProgress.done()
-// })
+
+/** 简单登录守卫：未登录时访问受保护页面跳回登录 */
+router.beforeEach((to) => {
+  if (to.path !== '/login' && !getToken()) return { path: '/login' }
+  if (to.path === '/login' && getToken()) return { path: '/home' }
+  return true
+})
+
 export default router
