@@ -33,13 +33,20 @@ import {
 import { useDeviceStore } from '@/stores/device'
 import type { UploadTarget } from '@/api/upload'
 
-const props = withDefaults(defineProps<{ target?: UploadTarget }>(), { target: 'sys' })
+const props = withDefaults(defineProps<{ target?: UploadTarget; deviceId?: string }>(), {
+  target: 'sys',
+  deviceId: ''
+})
 
 const deviceStore = useDeviceStore()
 const message = useMessage()
 const fileList = ref<UploadFileInfo[]>([])
 
-const recent = computed(() => deviceStore.files.filter((f) => f.target === props.target).slice(0, 2))
+const recent = computed(() =>
+  deviceStore.files
+    .filter((f) => f.target === props.target && (!props.deviceId || f.deviceId === props.deviceId))
+    .slice(0, 2)
+)
 
 const formatSize = (size: number) => {
   if (size < 1024) return `${size} B`
@@ -62,7 +69,9 @@ const customRequest = async ({ file, onFinish, onError, onProgress }: UploadCust
     return
   }
   try {
-    const record = await deviceStore.upload(raw, props.target, (percent) => onProgress({ percent }))
+    const record = await deviceStore.upload(raw, props.target, props.deviceId, (percent) =>
+      onProgress({ percent })
+    )
     message.success(`「${record.filename}」上传成功`)
     onFinish()
     fileList.value = []

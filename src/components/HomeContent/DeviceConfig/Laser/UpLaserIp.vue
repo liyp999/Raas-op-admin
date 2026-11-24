@@ -4,7 +4,7 @@
     <template #header>
       <div class="m-head">
         <span class="tagline">// LASER LINK CONFIG</span>
-        <h3>红外激光 IP / 端口修改</h3>
+        <h3>{{ device.name }} · IP / 端口修改</h3>
       </div>
     </template>
     <template #footer>
@@ -16,9 +16,9 @@
           <n-input v-model:value="form.port" placeholder="1-65535" :maxlength="5" />
         </n-form-item>
         <div class="meta">
-          CURRENT <b>{{ laser?.ip || '--' }}:{{ laser?.port ?? '--' }}</b>
+          CURRENT <b>{{ device.ip || '--' }}:{{ device.port ?? '--' }}</b>
           <span class="sep">|</span>
-          MODEL <b>{{ laser?.model || '--' }}</b>
+          MODEL <b>{{ device.model || '--' }}</b>
         </div>
       </n-form>
       <div class="actions">
@@ -33,6 +33,9 @@
 import { computed, reactive, ref } from 'vue'
 import { NButton, NForm, NFormItem, NInput, NModal, useMessage } from 'naive-ui'
 import { useDeviceStore } from '@/stores/device'
+import type { LaserDevice } from '@/utils/typing/raas'
+
+const props = defineProps<{ device: LaserDevice }>()
 
 const deviceStore = useDeviceStore()
 const message = useMessage()
@@ -40,14 +43,13 @@ const showModal = ref(false)
 const saving = ref(false)
 const form = reactive({ ip: '', port: '' })
 
-const laser = computed(() => deviceStore.laser)
-const online = computed(() => laser.value?.status === 'online')
+const online = computed(() => props.device.status === 'online')
 
 const IPV4 = /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/
 
 function open() {
-  form.ip = laser.value?.ip || ''
-  form.port = String(laser.value?.port ?? '')
+  form.ip = props.device.ip || ''
+  form.port = String(props.device.port ?? '')
   showModal.value = true
 }
 
@@ -64,8 +66,8 @@ async function submit() {
   }
   saving.value = true
   try {
-    await deviceStore.changeLaserConfig(ip, port)
-    message.success(`配置已更新为 ${ip}:${port}`)
+    await deviceStore.changeLaserConfig(props.device.id, ip, port)
+    message.success(`${props.device.name} 配置已更新为 ${ip}:${port}`)
     showModal.value = false
   } catch (e) {
     message.error((e as Error).message)
