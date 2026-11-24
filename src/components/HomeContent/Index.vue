@@ -85,11 +85,11 @@ const baseColumns: DataTableColumns<SysDevice> = [
     align: 'center',
     render: (row: SysDevice) =>
       h('div', { class: 'action-row' }, [
-        h(UpdateIp),
+        h(UpdateIp, { device: row }),
         row.status === 'offline'
           ? h(
               NPopconfirm,
-              { onPositiveClick: () => poweron(), positiveText: '开机', negativeText: '取消' },
+              { onPositiveClick: () => poweron(row.id), positiveText: '开机', negativeText: '取消' },
               {
                 trigger: () =>
                   h(NButton, { type: 'primary', size: 'small', secondary: true }, { default: () => '设备开机' }),
@@ -98,7 +98,7 @@ const baseColumns: DataTableColumns<SysDevice> = [
             )
           : h(
               NPopconfirm,
-              { onPositiveClick: () => reboot(), positiveText: '重启', negativeText: '取消' },
+              { onPositiveClick: () => reboot(row.id), positiveText: '重启', negativeText: '取消' },
               {
                 trigger: () =>
                   h(NButton, { type: 'warning', size: 'small', secondary: true }, { default: () => '设备重启' }),
@@ -108,7 +108,7 @@ const baseColumns: DataTableColumns<SysDevice> = [
         h(
           NPopconfirm,
           {
-            onPositiveClick: () => shutdown(),
+            onPositiveClick: () => shutdown(row.id),
             positiveText: '关机',
             negativeText: '取消',
             disabled: row.status !== 'online'
@@ -130,7 +130,7 @@ const baseColumns: DataTableColumns<SysDevice> = [
     key: 'upload',
     width: 290,
     align: 'center',
-    render: () => h(Upload, { target: 'sys' })
+    render: (row: SysDevice) => h(Upload, { target: 'sys', deviceId: row.id })
   }
 ]
 
@@ -139,27 +139,27 @@ const columns = computed(() =>
 )
 const scrollX = computed(() => (compact.value ? 1220 : 1380))
 
-async function reboot() {
+async function reboot(deviceId: string) {
   try {
-    const result = await deviceStore.rebootSysDevice()
+    const result = await deviceStore.rebootSysDevice(deviceId)
     message.success(`重启指令已下发，预计 ${result.eta} 秒恢复`)
   } catch (e) {
     message.error((e as Error).message)
   }
 }
 
-async function shutdown() {
+async function shutdown(deviceId: string) {
   try {
-    await deviceStore.shutdownSysDevice()
+    await deviceStore.shutdownSysDevice(deviceId)
     message.warning('设备已关机')
   } catch (e) {
     message.error((e as Error).message)
   }
 }
 
-async function poweron() {
+async function poweron(deviceId: string) {
   try {
-    await deviceStore.poweronSysDevice()
+    await deviceStore.poweronSysDevice(deviceId)
     message.success('开机指令已下发，设备启动中')
   } catch (e) {
     message.error((e as Error).message)

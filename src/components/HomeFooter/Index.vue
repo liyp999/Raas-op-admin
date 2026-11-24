@@ -89,12 +89,12 @@ const baseColumns: DataTableColumns<LaserDevice> = [
     key: 'config',
     width: 230,
     align: 'center',
-    render: () =>
+    render: (row: LaserDevice) =>
       h('div', { class: 'action-row' }, [
-        h(UpLaserIp),
+        h(UpLaserIp, { device: row }),
         h(
           NButton,
-          { type: 'primary', size: 'small', secondary: true, onClick: () => runMeasure() },
+          { type: 'primary', size: 'small', secondary: true, onClick: () => runMeasure(row) },
           { default: () => '立即测量' }
         )
       ])
@@ -104,7 +104,7 @@ const baseColumns: DataTableColumns<LaserDevice> = [
     key: 'upload',
     width: 290,
     align: 'center',
-    render: () => h(Upload, { target: 'laser' })
+    render: (row: LaserDevice) => h(Upload, { target: 'laser', deviceId: row.id })
   }
 ]
 
@@ -113,11 +113,11 @@ const columns = computed(() =>
 )
 const scrollX = computed(() => (compact.value ? 1180 : 1360))
 
-async function runMeasure() {
+async function runMeasure(row: LaserDevice) {
   try {
-    const m = await deviceStore.runMeasure()
+    const m = await deviceStore.runMeasure(row.id)
     message.success(
-      `测量完成：距离 ${Number(m.distance).toFixed(2)} m，功率 ${m.power} W，波长 ${m.wavelength} nm`
+      `${row.name} 测量完成：距离 ${Number(m.distance).toFixed(2)} m，功率 ${m.power} W，波长 ${m.wavelength} nm`
     )
   } catch (e) {
     message.error((e as Error).message)
