@@ -1,6 +1,6 @@
 # raas-op-admin
 
-RaaS 设备运维后台（Vue 3 + Vite + naive-ui + Pinia），管理边缘网关与红外激光两台设备：登录、设备状态监控、IP/端口配置、重启关机、应用包上传、激光测量。
+RaaS 设备运维后台（Vue 3 + Vite + naive-ui + Pinia），多设备监控边缘网关与红外激光（默认 3 + 3 台，清单见 `backend/devices.json`）：登录、分组在线率、IP/端口配置、重启关机、应用包上传、逐台激光测量（功率/波长/温度/脉宽/测距）。
 
 ## 本地联调（自带 mock 后端）
 
@@ -15,6 +15,38 @@ npm run dev:all             # 同时起 mock(8090) + 前端(3001)
 - 接口文档与错误码见 [`mock-server/README.md`](mock-server/README.md)
 
 前端通过 `VITE_APP_API_BASEURL=/api` + vite 代理转发到 `VITE_APP_PROXY_TARGET`（默认 `http://127.0.0.1:8090`）。接真实后端时只改 `.env.development`，不用动代码。
+
+## 后端（Python 多设备版为主，Node mock 为早期单设备版）
+
+前端只认 `/api` + `{ code, msg, data, ts }` 这套契约，所以后端可以换语言而前端零改动；两套实现都占 **8090**，只能同时起一个。
+
+**Python / FastAPI（推荐）**
+
+```bash
+python -m pip install -r backend/requirements.txt
+npm run server:py         # 只起后端
+npm run dev:py            # 后端 + 前端一起起
+```
+
+实现见 [`backend/app.py`](backend/app.py)，接口表见 [`backend/README.md`](backend/README.md)。依赖仅 FastAPI + uvicorn + python-multipart；数据在内存，重启按配置复位；上传落盘到 `backend/uploads/`。
+
+**设备清单在 `backend/devices.json`**（默认 3 台边缘网关 + 3 台红外激光），加设备只改这个文件再重启后端，前端表格与卡片会自动按条数渲染：
+
+```json
+{ "gateways": [{ "id": "gw-1", "name": "边缘网关1", "ip": "192.168.1.28", "model": "EG-2000", "status": "online" }],
+  "lasers":   [{ "id": "laser-1", "name": "红外激光1", "ip": "192.168.1.31", "port": 502, "model": "IR-980", "distance": 2.35 }] }
+```
+
+接口按设备 id 寻址：`GET /api/devices`（返回 `{gateways, lasers, summary}`）、`PUT /api/devices/gateway/{id}/ip`、`POST /api/devices/gateway/{id}/reboot|shutdown|poweron`、`POST /api/devices/laser/{id}/measure` 等。
+
+**Node / Express（原 mock，单设备）**
+
+```bash
+cd mock-server && npm install && cd ..
+npm run dev:all
+```
+
+Node 版是早期单设备实现（旧路径 `/api/devices/sys`、`/api/devices/laser`），**与 Python 多设备版的契约已不再一致**，仅供追溯；日常联调请用 `npm run dev:py`。两套都覆盖登录、IP 修改、重启/关机/开机（3 秒状态流转）、激光测量（功率/波长/温度/脉宽/距离）、上传/下载/删除、健康检查，错误码 1001/1002/2001–2004/3001–3003/4004/5000。
 
 ## 主题（等轴测浅色 · 动态）
 
