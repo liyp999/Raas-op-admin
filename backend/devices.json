@@ -1,0 +1,60 @@
+{
+  "gateways": [
+    {
+      "id": "gw-1",
+      "name": "边缘网关1",
+      "model": "RaaS-EG2000",
+      "ip": "192.168.1.28",
+      "cpu": 18.2,
+      "mem": 41.5,
+      "temperature": 43,
+      "status": "online"
+    },
+    {
+      "id": "gw-2",
+      "name": "边缘网关2",
+      "model": "RaaS-EG2000",
+      "ip": "192.168.1.29",
+      "cpu": 26.7,
+      "mem": 52.3,
+      "temperature": 46,
+      "status": "online"
+    },
+    {
+      "id": "gw-3",
+      "name": "边缘网关3",
+      "model": "RaaS-EG2000",
+      "ip": "192.168.1.30",
+      "cpu": 0,
+      "mem": 0,
+      "temperature": 0,
+      "status": "offline"
+    }
+  ],
+  "lasers": [
+    {
+      "id": "laser-1",
+      "name": "红外激光1",
+      "model": "IR-LD980",
+      "ip": "192.168.1.31",
+      "port": 502,
+      "status": "online"
+    },
+    {
+      "id": "laser-2",
+      "name": "红外激光2",
+      "model": "IR-LD980",
+      "ip": "192.168.1.32",
+      "port": 503,
+      "status": "online"
+    },
+    {
+      "id": "laser-3",
+      "name": "红外激光3",
+      "model": "IR-LD980",
+      "ip": "192.168.1.33",
+      "port": 504,
+      "status": "online"
+    }
+  ]
+}
