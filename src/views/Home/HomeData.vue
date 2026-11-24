@@ -16,49 +16,49 @@
       <section class="panel">
         <header class="panel-top">
           <div class="pt-left">
-            <span class="icon-chip"><i class="led" :class="toneOf(deviceStore.summary.sys.status)"></i></span>
+            <span class="icon-chip"><i class="led" :class="groupTone(sysSummary)"></i></span>
             <div class="pt-text">
               <span class="pt-name">边缘网关</span>
-              <span class="pt-code">SYS-01 · {{ deviceStore.sys?.model || '—' }}</span>
+              <span class="pt-code">EDGE · 共 {{ sysSummary.total }} 台 · {{ gatewayModel }}</span>
             </div>
           </div>
           <div class="pt-right">
-            <span class="metric"><em>{{ deviceStore.summary.sys.online }}</em>/{{ deviceStore.summary.sys.total }}</span>
-            <span class="badge" :class="toneOf(deviceStore.summary.sys.status)">
-              {{ statusText(deviceStore.summary.sys.status) }}
+            <span class="metric"><em>{{ sysSummary.online }}</em>/{{ sysSummary.total }}</span>
+            <span class="badge" :class="groupTone(sysSummary)">
+              {{ groupText(sysSummary) }}
             </span>
           </div>
         </header>
         <SysData />
         <footer class="panel-bottom">
-          <span>启动次数 <b>{{ deviceStore.sys?.bootCount ?? '—' }}</b></span>
-          <span>最近启动 <b>{{ shortTime(deviceStore.sys?.lastBootAt) }}</b></span>
-          <span>温度 <b>{{ deviceStore.sys?.temperature ?? '—' }}℃</b></span>
+          <span>在网 <b>{{ sysSummary.online }}/{{ sysSummary.total }}</b></span>
+          <span>平均温度 <b>{{ avgTemp }}℃</b></span>
+          <span>最近启动 <b>{{ lastBoot }}</b></span>
         </footer>
       </section>
 
       <section class="panel">
         <header class="panel-top">
           <div class="pt-left">
-            <span class="icon-chip"><i class="led" :class="toneOf(deviceStore.summary.laser.status)"></i></span>
+            <span class="icon-chip"><i class="led" :class="groupTone(laserSummary)"></i></span>
             <div class="pt-text">
               <span class="pt-name">红外激光</span>
-              <span class="pt-code">LSR-01 · {{ deviceStore.laser?.model || '—' }}</span>
+              <span class="pt-code">LASER · 共 {{ laserSummary.total }} 台 · {{ laserModel }}</span>
             </div>
           </div>
           <div class="pt-right">
-            <span class="metric"><em>{{ deviceStore.summary.laser.online }}</em>/{{ deviceStore.summary.laser.total }}</span>
-            <span class="badge" :class="toneOf(deviceStore.summary.laser.status)">
-              {{ statusText(deviceStore.summary.laser.status) }}
+            <span class="metric"><em>{{ laserSummary.online }}</em>/{{ laserSummary.total }}</span>
+            <span class="badge" :class="groupTone(laserSummary)">
+              {{ groupText(laserSummary) }}
             </span>
           </div>
         </header>
         <LaserData />
         <footer class="panel-bottom">
-          <span>端口 <b>{{ deviceStore.laser?.port ?? '—' }}</b></span>
-          <span>最近测量 <b>{{ shortTime(deviceStore.laser?.measure?.updatedAt) }}</b></span>
-          <span>距离 <b>{{ fmtDist(deviceStore.laser?.measure?.distance) }}</b></span>
-          <span>波长 <b>{{ deviceStore.laser?.measure?.wavelength ?? '—' }} nm</b></span>
+          <span>在网 <b>{{ laserSummary.online }}/{{ laserSummary.total }}</b></span>
+          <span>最近测量 <b>{{ lastMeasureAt }}</b></span>
+          <span>距离 <b>{{ distRange }}</b></span>
+          <span>端口 <b>{{ portRange }}</b></span>
         </footer>
       </section>
 
@@ -78,7 +78,7 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted } from 'vue'
+import { computed, onBeforeUnmount, onMounted } from 'vue'
 import UserTop from '@/components/HomeTop/Index.vue'
 import SysData from '@/components/HomeContent/Index.vue'
 import LaserData from '@/components/HomeFooter/Index.vue'
@@ -86,26 +86,31 @@ import IsoScene from '@/components/IsoScene/Index.vue'
 import router from '@/router'
 import { useDeviceStore } from '@/stores/device'
 import { useUserStore } from '@/stores/user'
-import type { DeviceStatus } from '@/utils/typing/raas'
+import type { GroupSummary } from '@/utils/typing/raas'
 
 const deviceStore = useDeviceStore()
 const userStore = useUserStore()
 let timer: number | undefined
 
-const STATUS_TEXT: Record<DeviceStatus, string> = {
-  online: 'ONLINE 在线',
-  offline: 'OFFLINE 离线',
-  rebooting: 'REBOOT 重启中',
-  booting: 'BOOTING 启动中'
+/* ── 分组统计 ── */
+const sysSummary = computed<GroupSummary>(() => deviceStore.summary.gateway)
+const laserSummary = computed<GroupSummary>(() => deviceStore.summary.laser)
+
+const gatewayModel = computed(() => deviceStore.gateways[0]?.model || '—')
+const laserModel = computed(() => deviceStore.lasers[0]?.model || '—')
+
+/** 在线比例决定色调：全在线 ok / 部分在线 warn / 全离线 err */
+const groupTone = (g: GroupSummary) => {
+  if (!g.total) return 'err'
+  if (g.online === g.total) return 'ok'
+  if (g.online === 0) return 'err'
+  return 'warn'
 }
 
-const statusText = (status: DeviceStatus) => STATUS_TEXT[status] || status
-
-const toneOf = (status: DeviceStatus) => {
-  if (status === 'online') return 'ok'
-  if (status === 'rebooting') return 'warn'
-  if (status === 'booting') return 'info'
-  return 'err'
+const groupText = (g: GroupSummary) => {
+  if (!g.total) return 'NO DEVICE 未配置'
+  if (g.online === g.total) return `ALL ONLINE 全部在线`
+  return `${g.total - g.online} 台离线`
 }
 
 const shortTime = (iso?: string) => {
@@ -117,6 +122,56 @@ const shortTime = (iso?: string) => {
 
 /** 测量距离，单位 m，保留两位小数 */
 const fmtDist = (v?: number) => (typeof v === 'number' && Number.isFinite(v) ? `${v.toFixed(2)} m` : '—')
+
+/** 在线网关的平均温度 */
+const avgTemp = computed(() => {
+  const online = deviceStore.gateways.filter((d) => d.status === 'online')
+  if (!online.length) return '—'
+  const sum = online.reduce((acc, d) => acc + (Number(d.temperature) || 0), 0)
+  return (sum / online.length).toFixed(1)
+})
+
+/** 全部网关里最近的一次启动时间 */
+const lastBoot = computed(() => {
+  const stamps = deviceStore.gateways
+    .map((d) => d.lastBootAt)
+    .filter(Boolean)
+    .map((iso) => new Date(iso).getTime())
+    .filter((n) => Number.isFinite(n))
+  if (!stamps.length) return '—'
+  return shortTime(new Date(Math.max(...stamps)).toISOString())
+})
+
+/** 全部激光里最近的一次测量时间 */
+const lastMeasureAt = computed(() => {
+  const stamps = deviceStore.lasers
+    .map((d) => d.measure?.updatedAt)
+    .filter(Boolean)
+    .map((iso) => new Date(iso as string).getTime())
+    .filter((n) => Number.isFinite(n))
+  if (!stamps.length) return '—'
+  return shortTime(new Date(Math.max(...stamps)).toISOString())
+})
+
+/** 各台激光的测距范围 */
+const distRange = computed(() => {
+  const values = deviceStore.lasers
+    .map((d) => d.measure?.distance)
+    .filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
+  if (!values.length) return '—'
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  return min === max ? fmtDist(min) : `${min.toFixed(2)}–${max.toFixed(2)} m`
+})
+
+/** 各台激光的端口范围 */
+const portRange = computed(() => {
+  const ports = deviceStore.lasers.map((d) => d.port).filter((p): p is number => Number.isFinite(p))
+  if (!ports.length) return '—'
+  const min = Math.min(...ports)
+  const max = Math.max(...ports)
+  return min === max ? `${min}` : `${min}–${max}`
+})
 
 async function load() {
   try {
@@ -148,7 +203,6 @@ onBeforeUnmount(() => {
   position: relative;
   z-index: 1;
 }
-
 .main {
   position: relative;
   z-index: 1;
@@ -339,7 +393,6 @@ onBeforeUnmount(() => {
   color: var(--hud-accent);
   margin-right: 2px;
 }
-
 .badge {
   display: inline-flex;
   align-items: center;
