@@ -1,18 +1,30 @@
 import { defineStore } from 'pinia'
-import { getOverview, rebootSys, shutdownSys, poweronSys, updateSysIp } from '@/api/system'
+import {
+  getOverview,
+  poweronGateway,
+  rebootGateway,
+  shutdownGateway,
+  updateGatewayIp
+} from '@/api/system'
 import { measureLaser, updateLaser } from '@/api/laser'
-import { getFiles, uploadFile, deleteFile, type UploadTarget } from '@/api/upload'
-import type { DeviceSummary, LaserDevice, SysDevice, UploadedFile } from '@/utils/typing/raas'
+import { deleteFile, getFiles, uploadFile, type UploadTarget } from '@/api/upload'
+import type {
+  DeviceOverview,
+  DeviceSummary,
+  LaserDevice,
+  SysDevice,
+  UploadedFile
+} from '@/utils/typing/raas'
 
 const emptySummary: DeviceSummary = {
-  sys: { status: 'offline', online: 0, total: 0 },
-  laser: { status: 'offline', online: 0, total: 0 }
+  gateway: { online: 0, total: 0 },
+  laser: { online: 0, total: 0 }
 }
 
 export const useDeviceStore = defineStore('device', {
   state: () => ({
-    sys: null as SysDevice | null,
-    laser: null as LaserDevice | null,
+    gateways: [] as SysDevice[],
+    lasers: [] as LaserDevice[],
     summary: emptySummary,
     files: [] as UploadedFile[],
     loading: false,
@@ -20,16 +32,17 @@ export const useDeviceStore = defineStore('device', {
     error: ''
   }),
   getters: {
-    sysRows: (state) => (state.sys ? [state.sys] : []),
-    laserRows: (state) => (state.laser ? [state.laser] : []),
-    sysCount: (state) => `${state.summary.sys.online}/${state.summary.sys.total}`,
+    /** 表格数据源：条数完全由后端 devices.json 决定 */
+    sysRows: (state): SysDevice[] => state.gateways,
+    laserRows: (state): LaserDevice[] => state.lasers,
+    sysCount: (state) => `${state.summary.gateway.online}/${state.summary.gateway.total}`,
     laserCount: (state) => `${state.summary.laser.online}/${state.summary.laser.total}`
   },
   actions: {
-    applyOverview(data: { sys: SysDevice; laser: LaserDevice; summary: DeviceSummary }) {
-      this.sys = data.sys
-      this.laser = data.laser
-      this.summary = data.summary
+    applyOverview(data: DeviceOverview) {
+      this.gateways = data.gateways || []
+      this.lasers = data.lasers || []
+      this.summary = data.summary || emptySummary
       this.lastUpdated = new Date().toLocaleTimeString('zh-CN', { hour12: false })
       this.error = ''
     },
@@ -46,37 +59,40 @@ export const useDeviceStore = defineStore('device', {
       }
     },
 
-    async changeSysIp(ip: string) {
-      const device = await updateSysIp(ip)
-      this.sys = device
+    async changeSysIp(deviceId: string, ip: string) {
+      const device = await updateGatewayIp(deviceId, ip)
+      const idx = this.gateways.findIndex((d) => d.id === deviceId)
+      if (idx >= 0) this.gateways[idx] = device
       return device
     },
 
-    async rebootSysDevice() {
-      const result = await rebootSys()
+    async rebootSysDevice(deviceId: string) {
+      const result = await rebootGateway(deviceId)
       await this.refresh()
       return result
     },
 
-    async shutdownSysDevice() {
-      await shutdownSys()
+    async shutdownSysDevice(deviceId: string) {
+      await shutdownGateway(deviceId)
       await this.refresh()
     },
 
-    async poweronSysDevice() {
-      await poweronSys()
+    async poweronSysDevice(deviceId: string) {
+      await poweronGateway(deviceId)
       await this.refresh()
     },
 
-    async changeLaserConfig(ip: string, port: number) {
-      const device = await updateLaser(ip, port)
-      this.laser = device
+    async changeLaserConfig(deviceId: string, ip: string, port: number) {
+      const device = await updateLaser(deviceId, ip, port)
+      const idx = this.lasers.findIndex((d) => d.id === deviceId)
+      if (idx >= 0) this.lasers[idx] = device
       return device
     },
 
-    async runMeasure() {
-      const measure = await measureLaser()
-      if (this.laser) this.laser = { ...this.laser, measure }
+    async runMeasure(deviceId: string) {
+      const measure = await measureLaser(deviceId)
+      const idx = this.lasers.findIndex((d) => d.id === deviceId)
+      if (idx >= 0) this.lasers[idx] = { ...this.lasers[idx], measure }
       return measure
     },
 
@@ -85,8 +101,8 @@ export const useDeviceStore = defineStore('device', {
       return this.files
     },
 
-    async upload(file: File, target: UploadTarget, onProgress?: (p: number) => void) {
-      const record = await uploadFile(file, target, onProgress)
+    async upload(file: File, target: UploadTarget, deviceId = '', onProgress?: (p: number) => void) {
+      const record = await uploadFile(file, target, deviceId, onProgress)
       this.files.unshift(record)
       return record
     },

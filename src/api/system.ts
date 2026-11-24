@@ -1,32 +1,34 @@
 import { http } from '@/utils/request'
 import type { DeviceOverview, SysDevice } from '@/utils/typing/raas'
 
-/** 设备总览：网关 + 激光 + 统计 */
+/** 设备总览：多台网关 + 多台激光 + 分组统计 */
 export function getOverview() {
   return http.get<DeviceOverview>('/devices')
 }
 
-/** 边缘网关设备详情 */
-export function getSysDevice() {
-  return http.get<SysDevice>('/devices/sys')
+/** 单台边缘网关详情 */
+export function getGateway(deviceId: string) {
+  return http.get<SysDevice>(`/devices/gateway/${deviceId}`)
 }
 
-/** 修改边缘网关 IP */
-export function updateSysIp(ip: string) {
-  return http.put<SysDevice>('/devices/sys/ip', { ip })
+/** 修改某台边缘网关 IP */
+export function updateGatewayIp(deviceId: string, ip: string) {
+  return http.put<SysDevice>(`/devices/gateway/${deviceId}/ip`, { ip })
 }
 
-/** 重启边缘网关 */
-export function rebootSys() {
-  return http.post<{ taskId: string; status: string; eta: number }>('/devices/sys/reboot')
+/** 重启某台边缘网关 */
+export function rebootGateway(deviceId: string) {
+  return http.post<{ taskId: string; deviceId: string; status: string; eta: number }>(
+    `/devices/gateway/${deviceId}/reboot`
+  )
 }
 
 /** 关机 */
-export function shutdownSys() {
-  return http.post<SysDevice>('/devices/sys/shutdown')
+export function shutdownGateway(deviceId: string) {
+  return http.post<SysDevice>(`/devices/gateway/${deviceId}/shutdown`)
 }
 
 /** 开机 */
-export function poweronSys() {
-  return http.post<SysDevice>('/devices/sys/poweron')
+export function poweronGateway(deviceId: string) {
+  return http.post<SysDevice>(`/devices/gateway/${deviceId}/poweron`)
 }

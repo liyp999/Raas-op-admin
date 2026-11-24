@@ -60,22 +60,22 @@ export interface LaserDevice {
   history?: LaserMeasure[]
 }
 
-/** 分组设备统计 */
+/** 分组设备统计（在线数 / 总数） */
 export interface GroupSummary {
-  status: DeviceStatus
   online: number
   total: number
 }
 
+/** 两类设备的分组统计 */
 export interface DeviceSummary {
-  sys: GroupSummary
+  gateway: GroupSummary
   laser: GroupSummary
 }
 
-/** 设备总览 */
+/** 设备总览：多台网关 + 多台激光（条数由后端 devices.json 决定） */
 export interface DeviceOverview {
-  sys: SysDevice
-  laser: LaserDevice
+  gateways: SysDevice[]
+  lasers: LaserDevice[]
   summary: DeviceSummary
 }
 
@@ -86,6 +86,8 @@ export interface UploadedFile {
   storedName: string
   size: number
   target: 'sys' | 'laser'
+  /** 目标设备 id，未指定时为空串 */
+  deviceId?: string
   mimetype: string
   uploadedAt: string
   uploadedBy: string
